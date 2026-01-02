@@ -9,6 +9,7 @@ export interface InfisicalModuleOptions {
   dotenv?: DotenvConfigOptions | false;
   override?: boolean;
   failFast?: boolean;
+  debug?: boolean;
 }
 
 export interface InfisicalModuleAsyncOptions
