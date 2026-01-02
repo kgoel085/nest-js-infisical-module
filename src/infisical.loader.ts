@@ -21,8 +21,21 @@ export async function loadInfisicalSecrets(options: {
     debugLog(options.debug, `Fetching secrets from Infisical`);
     debugLog(options.debug, `baseUrl=${options.baseUrl}, projectId=${options.projectId}, environment=${options.environment}`);
 
+    const url = `${options.baseUrl}/api/v3/secrets/raw`
 
-    const response = await axios.get(`${options.baseUrl}/api/v3/secrets/raw`, {
+    debugLog(options.debug, JSON.stringify({
+      url,
+      timeout: 5000,
+      headers: {
+        Authorization: `Bearer ${options.token}`,
+      },
+      params: {
+        projectId: options.projectId,
+        environment: options.environment,
+      },
+    }));
+    const response = await axios.get(url, {
+      timeout: 5000,
       headers: {
         Authorization: `Bearer ${options.token}`,
       },
@@ -31,6 +44,8 @@ export async function loadInfisicalSecrets(options: {
         environment: options.environment,
       },
     });
+
+    debugLog(options.debug, `Received response from Infisical with status ${response.status}`);
 
     const secrets: Record<string, string> = response.data?.secrets ?? {};
     debugLog(
