@@ -44,4 +44,6 @@ jobs:
           echo "Version $VERSION is not published yet. Proceeding."
 
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: npm publish --access public
