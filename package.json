@@ -20,6 +20,11 @@
   "peerDependencies": {
     "@nestjs/common": ">=9.0.0"
   },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": false
+    }
+  },
   "engines": {
     "node": ">=18"
   },
