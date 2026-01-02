@@ -22,7 +22,7 @@ export class InfisicalModule {
       module: InfisicalModule,
       providers: [
         {
-          provide: 'INFISICAL_INIT',
+          provide: 'INFISICAL_BOOTSTRAP',
           useFactory: async () => {
             await initializeInfisical(resolved);
           },
@@ -37,7 +37,7 @@ export class InfisicalModule {
       imports: options.imports,
       providers: [
         {
-          provide: 'INFISICAL_INIT',
+          provide: 'INFISICAL_BOOTSTRAP',
           inject: options.inject ?? [],
           useFactory: async (...args: any[]) => {
             const resolved = await options.useFactory(...args);
