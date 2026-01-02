@@ -1,6 +1,6 @@
 {
   "name": "nestjs-infisical",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "CLI-free Infisical HTTP integration for NestJS",
   "license": "MIT",
   "main": "dist/index.js",
