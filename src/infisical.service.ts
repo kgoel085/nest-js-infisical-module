@@ -38,6 +38,7 @@ export async function initializeInfisical(
   );
 
   if (provided === 0) {
+    debugLog(debug, 'No Infisical configuration provided');
     return;
   }
 
@@ -49,6 +50,7 @@ export async function initializeInfisical(
     return;
   }
 
+  debugLog(debug, 'Loading Infisical secrets');
   await loadInfisicalSecrets({
     baseUrl: baseUrl as string,
     token: token as string,

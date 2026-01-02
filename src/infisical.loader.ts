@@ -60,6 +60,7 @@ export async function loadInfisicalSecrets(options: {
     }
 
   } catch (err) {
+    debugLog(options.debug, `Error loading secrets from Infisical: ${err}`);
     if (options.failFast) {
       throw err;
     }
