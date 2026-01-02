@@ -58,5 +58,6 @@ export async function initializeInfisical(
     environment: environment as string,
     override,
     failFast,
+    debug
   });
 }
