@@ -24,10 +24,13 @@ export class InfisicalModule {
         {
           provide: 'INFISICAL_BOOTSTRAP',
           useFactory: async () => {
+            console.log('[nestjs-infisical] BOOTSTRAP provider START');
             await initializeInfisical(resolved);
+            console.log('[nestjs-infisical] BOOTSTRAP provider END');
           },
         },
       ],
+      exports: ['INFISICAL_BOOTSTRAP'],
     };
   }
 
@@ -40,11 +43,14 @@ export class InfisicalModule {
           provide: 'INFISICAL_BOOTSTRAP',
           inject: options.inject ?? [],
           useFactory: async (...args: any[]) => {
+            console.log('[nestjs-infisical] BOOTSTRAP provider START');
             const resolved = await options.useFactory(...args);
             await initializeInfisical(resolved);
+            console.log('[nestjs-infisical] BOOTSTRAP provider END');
           },
         },
       ],
+      exports: ['INFISICAL_BOOTSTRAP']
     };
   }
 }
