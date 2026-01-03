@@ -1,6 +1,6 @@
 {
   "name": "nestjs-infisical",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "CLI-free Infisical secrets loader for NestJS that fetches secrets via the HTTP API before application bootstrap and injects them into process.env.",
   "license": "MIT",
   "main": "dist/index.js",
