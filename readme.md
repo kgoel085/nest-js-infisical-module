@@ -1,216 +1,205 @@
 # nestjs-infisical
 
-nestjs-infisical is a **CLI-free**, **deterministic**, and **production-safe** Infisical integration for NestJS.
+CLI-free Infisical secrets loader for NestJS applications.
 
-It loads secrets **once at application startup** using the **Infisical HTTP API only** and injects them into `process.env`, making it fully compatible with `@nestjs/config`.
-
-This package is intentionally boring.
-
----
-
-## Why This Package Exists
-
-Most Infisical integrations rely on the Infisical CLI, background agents, or runtime polling.
-
-This package exists to provide:
-
-- No CLI dependency
-- No background processes
-- No runtime mutation
-- Deterministic startup behavior
-- Works in Docker, CI, and production
-- Pure HTTP API usage
-
-If you want secrets loaded **once at boot** and then forgotten, this is for you.
+This package loads secrets from Infisical **before** your NestJS application boots,
+injects them into `process.env`, and then hands control back to NestJS.
+It is intentionally boring, deterministic, and production-safe.
 
 ---
 
-## What This Package Does
+## Why this package exists
 
-- Loads environment variables from `.env` using `dotenv` (optional)
-- Fetches secrets from Infisical via HTTP
-- Injects secrets into `process.env`
-- Allows `@nestjs/config` to consume them normally
-- Runs **only during application bootstrap**
+Earlier versions attempted to integrate Infisical directly inside NestJS modules.
+While technically possible, this approach is **not deterministic** because:
+
+- NestJS does not guarantee global ordering of module side-effects
+- Async work inside modules can interleave with bootstrap
+- Debugging startup order becomes extremely difficult
+
+Secrets loading is **global, side-effectful, and order-sensitive**.
+The correct place for it is **before NestJS starts**.
+
+This package now follows the same pattern used by:
+- AWS Parameter Store loaders
+- Vault integrations
+- Remote config systems
+- Feature flag bootstrappers
 
 ---
 
-## Load Order (IMPORTANT)
+## Architecture (Current)
 
-The load order is **strict and deterministic**:
+Startup flow:
 
-```text
-dotenv (optional)
-   ↓
-Infisical HTTP API
-   ↓
-process.env
-   ↓
-@nestjs/config
-```
+1. Optional dotenv load
+2. Infisical HTTP API call
+3. Inject secrets into `process.env`
+4. NestJS application bootstrap
+5. `@nestjs/config` reads from `process.env`
 
-This guarantees compatibility with `ConfigModule.forRoot()`.
+Diagram:
+
+dotenv → Infisical HTTP API → process.env → NestJS → ConfigModule
+
+---
+
+## What changed from v1 to v2
+
+### Old approach (v1 – deprecated)
+
+- Dynamic NestJS module
+- Async logic inside providers
+- Relied on NestJS lifecycle ordering
+- Hard to debug, non-deterministic
+
+### New approach (v2 – current)
+
+- Explicit async loader
+- Called from `main.ts`
+- Fully deterministic
+- No NestJS lifecycle coupling
+- Easier to reason about and debug
 
 ---
 
 ## Installation
 
-```bash
+```
 npm install nestjs-infisical
 ```
 
-Node.js **>= 18** is required.
+Node.js version requirement:
+
+- Node 18 or newer
 
 ---
 
-## Basic (Sync) Usage
+## Basic usage (recommended)
+
+### main.ts
 
 ```ts
-import { Module } from '@nestjs/common';
-import { InfisicalModule } from 'nestjs-infisical';
+import { loadInfisical } from 'nestjs-infisical';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
 
-@Module({
-  imports: [
-    InfisicalModule.forRoot({
-      baseUrl: 'https://app.infisical.com',
-      token: process.env.INFISICAL_TOKEN,
-      projectId: process.env.INFISICAL_PROJECT_ID,
-      environment: 'production',
-    }),
-  ],
-})
-export class AppModule {}
-```
+async function bootstrap() {
+  await loadInfisical({
+    debug: true
+  });
 
-Secrets will be injected into `process.env` before the application finishes bootstrapping.
-
----
-
-## Async Usage (Recommended)
-
-```ts
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { InfisicalModule } from 'nestjs-infisical';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot(),
-    InfisicalModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        baseUrl: config.get('INFISICAL_BASE_URL'),
-        token: config.get('INFISICAL_TOKEN'),
-        projectId: config.get('INFISICAL_PROJECT_ID'),
-        environment: config.get('INFISICAL_ENVIRONMENT'),
-      }),
-    }),
-  ],
-})
-export class AppModule {}
-```
-
----
-
-## Dotenv Support
-
-This package uses the **official `dotenv` package directly**.
-
-### Enable dotenv (default)
-
-```ts
-InfisicalModule.forRoot({
-  dotenv: {
-    path: '.env.local',
-  },
-});
-```
-
-### Disable dotenv
-
-```ts
-InfisicalModule.forRoot({
-  dotenv: false,
-});
-```
-
----
-
-## Configuration Options
-
-```ts
-interface InfisicalModuleOptions {
-  baseUrl?: string;
-  token?: string;
-  projectId?: string;
-  environment?: string;
-  dotenv?: DotenvConfigOptions | false;
-  override?: boolean;   // default: true
-  failFast?: boolean;   // default: true
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3000);
 }
+
+bootstrap();
 ```
 
-### override
-
-- `true` → Infisical secrets overwrite existing environment variables
-- `false` → Existing environment variables are preserved
-
-### failFast
-
-- `true` → Application startup fails if Infisical API fails
-- `false` → Logs a warning and continues startup
+That is all you need.
 
 ---
 
-## Edge Case Behavior
+## Configuration resolution order
 
-### No Infisical Config Provided
+Configuration is resolved in this order:
 
-Secrets are silently skipped. No logs, no errors.
+1. dotenv (unless disabled)
+2. Explicit options passed to `loadInfisical`
+3. Environment variables (`process.env`)
 
-### Partial Infisical Config Provided
+Required environment variables:
 
-If only some Infisical values are provided:
+- `INFISICAL_BASE_URL` (optional, defaults to Infisical Cloud)
+- `INFISICAL_TOKEN`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_ENVIRONMENT`
 
-```text
-[nestjs-infisical] Partial Infisical configuration detected. Secrets will not be loaded.
+---
+
+## Zero-config usage
+
+If all configuration is present in `.env`:
+
+```
+INFISICAL_TOKEN=xxx
+INFISICAL_PROJECT_ID=yyy
+INFISICAL_ENVIRONMENT=dev
 ```
 
-Secrets are skipped intentionally.
+You can simply call:
 
-### Infisical API Failure
-
-- `failFast: true` → Throws error and aborts startup
-- `failFast: false` → Logs warning and continues
-
----
-
-## Explicitly NOT Supported
-
-This package does **not**:
-
-- Use the Infisical CLI
-- Add health checks
-- Rotate secrets
-- Poll or hot-reload secrets
-- Cache secrets
-- Add retries or backoff
-- Add decorators
-- Mutate NestJS internals
-- Run after bootstrap
+```ts
+await loadInfisical();
+```
 
 ---
 
-## Design Philosophy
+## Mixed configuration example
 
-- Startup-only
-- Deterministic
-- Boring
-- Predictable
-- `process.env` is the only contract
+```ts
+await loadInfisical({
+  environment: 'production',
+  debug: true
+});
+```
 
-If you need dynamic secrets, rotation, or runtime behavior, use a different tool.
+Missing values are automatically read from `process.env`.
+
+---
+
+## Disable dotenv (Docker / Kubernetes)
+
+```ts
+await loadInfisical({
+  dotenv: false
+});
+```
+
+---
+
+## Failure behavior
+
+- `failFast: true` (default)
+  - Application crashes if Infisical fails
+- `failFast: false`
+  - Logs warning and continues without secrets
+
+---
+
+## What this package does NOT do
+
+- No Infisical CLI usage
+- No secret rotation
+- No background polling
+- No caching
+- No retries
+- No NestJS module mutation
+- No decorators
+- No health checks
+
+---
+
+## Compatibility with @nestjs/config
+
+Because secrets are loaded **before** NestJS starts,
+`@nestjs/config` works automatically without any integration.
+
+```ts
+ConfigModule.forRoot({
+  isGlobal: true
+});
+```
+
+All secrets are already present in `process.env`.
+
+---
+
+## Versioning note
+
+This architecture change is released as **v2.x**.
+If you were using the old module-based integration,
+migrate by moving Infisical loading to `main.ts`.
 
 ---
 
