@@ -1,0 +1,3 @@
+- Open an issue before major changes
+- Follow semantic versioning
+- Keep changes focused
