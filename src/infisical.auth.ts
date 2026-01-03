@@ -31,7 +31,7 @@ export async function fetchUniversalAuthToken(options: {
 
   if (!json.accessToken) {
     throw new Error(
-      'Infisical Universal Auth response missing accessToken',
+      'Infisical Universal Auth response missing accessToken or credentials',
     );
   }
 
