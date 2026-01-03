@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { InfisicalOptions } from './infisical.types';
 import { fetchInfisicalSecrets } from './infisical.http';
+import { fetchUniversalAuthToken } from './infisical.auth';
 import { debugLog } from './infisical.logger';
 
 const LOG_PREFIX = '[nestjs-infisical]';
@@ -15,7 +16,7 @@ export async function loadInfisical(
     debug = false,
   } = options;
 
-  // 1️⃣ Load dotenv FIRST
+  // 1️⃣ dotenv first
   if (dotenvOptions !== false) {
     debugLog(debug, 'Loading dotenv configuration');
     dotenv.config(dotenvOptions);
@@ -29,9 +30,19 @@ export async function loadInfisical(
       'https://app.infisical.com',
 
     token: options.token ?? process.env.INFISICAL_TOKEN,
-    projectId: options.projectId ?? process.env.INFISICAL_PROJECT_ID,
+
+    clientId:
+      options.clientId ?? process.env.INFISICAL_CLIENT_ID,
+    clientSecret:
+      options.clientSecret ??
+      process.env.INFISICAL_CLIENT_SECRET,
+
+    projectId:
+      options.projectId ?? process.env.INFISICAL_PROJECT_ID,
+
     environment:
-      options.environment ?? process.env.INFISICAL_ENVIRONMENT,
+      options.environment ??
+      process.env.INFISICAL_ENVIRONMENT,
   };
 
   const providedCount = Object.values(resolved).filter(Boolean).length;
@@ -41,34 +52,52 @@ export async function loadInfisical(
     `Infisical config resolved: ${
       providedCount === 0
         ? 'none'
-        : providedCount === 4
+        : providedCount >= 4
         ? 'complete'
         : 'partial'
     }`,
   );
 
-  // 3️⃣ No config → silently skip
   if (providedCount === 0) {
     debugLog(debug, 'No Infisical configuration provided. Skipping.');
     return;
   }
 
-  // 4️⃣ Partial config → warn & skip
-  if (providedCount !== 4) {
+  if (!resolved.projectId || !resolved.environment) {
     console.warn(
-      `${LOG_PREFIX} Partial Infisical configuration detected. Secrets will not be loaded.`,
+      `${LOG_PREFIX} Missing projectId or environment. Secrets will not be loaded.`,
     );
     return;
   }
 
   try {
-    debugLog(debug, 'Fetching Infisical secrets');
+    // 3️⃣ Resolve authentication
+    let accessToken: string | undefined;
 
+    if (resolved.token) {
+      debugLog(debug, 'Using Infisical service token');
+      accessToken = resolved.token.trim();
+    } else if (resolved.clientId && resolved.clientSecret) {
+      debugLog(debug, 'Using Infisical Universal Authentication');
+
+      accessToken = await fetchUniversalAuthToken({
+        baseUrl: resolved.baseUrl,
+        clientId: resolved.clientId,
+        clientSecret: resolved.clientSecret,
+      });
+    } else {
+      console.warn(
+        `${LOG_PREFIX} No valid Infisical authentication provided. Skipping.`,
+      );
+      return;
+    }
+
+    // 4️⃣ Fetch secrets
     const secrets = await fetchInfisicalSecrets({
-      baseUrl: resolved.baseUrl!,
-      token: resolved.token!.trim(),
-      projectId: resolved.projectId!,
-      environment: resolved.environment!,
+      baseUrl: resolved.baseUrl,
+      accessToken,
+      projectId: resolved.projectId,
+      environment: resolved.environment,
       debug,
     });
 

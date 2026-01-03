@@ -3,7 +3,7 @@ import { InfisicalSecretItem } from './infisical.types';
 
 export async function fetchInfisicalSecrets(options: {
   baseUrl: string;
-  token: string;
+  accessToken: string;
   projectId: string;
   environment: string;
   debug?: boolean;
@@ -14,14 +14,14 @@ export async function fetchInfisicalSecrets(options: {
   try {
     debugLog(options.debug, 'Calling Infisical HTTP API');
 
-    const url = new URL(`${options.baseUrl}/api/v3/secrets/raw`);
+    const url = new URL(`${options.baseUrl}/api/v4/secrets`);
     url.searchParams.set('projectId', options.projectId);
     url.searchParams.set('environment', options.environment);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${options.token}`,
+        Authorization: `Bearer ${options.accessToken}`,
         Accept: 'application/json',
       },
       signal: controller.signal,

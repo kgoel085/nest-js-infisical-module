@@ -1,44 +1,63 @@
 {
   "name": "nestjs-infisical",
-  "version": "2.0.0",
-  "description": "CLI-free Infisical HTTP integration for NestJS",
+  "version": "2.1.0",
+  "description": "CLI-free Infisical secrets loader for NestJS that fetches secrets via the HTTP API before application bootstrap and injects them into process.env.",
   "license": "MIT",
+
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kgoel085/nest-js-infisical-module"
+  },
+  "homepage": "https://github.com/kgoel085/nest-js-infisical-module#readme",
+  "bugs": {
+    "url": "https://github.com/kgoel085/nest-js-infisical-module/issues"
+  },
+
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build"
   },
+
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "typescript": "^5.9.3"
+    "dotenv": "^16.4.5"
   },
+
   "peerDependencies": {
-    "@nestjs/common": ">=9.0.0"
+    "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0"
   },
-  "peerDependenciesMeta": {
-    "@nestjs/common": {
-      "optional": false
-    }
-  },
+
   "engines": {
     "node": ">=18"
   },
+
   "publishConfig": {
     "access": "public"
   },
+
   "devDependencies": {
+    "typescript": "^5.9.3",
     "@types/node": "^25.0.3"
   },
+
   "keywords": [
     "nestjs",
     "infisical",
     "secrets",
+    "secret-management",
+    "environment-variables",
     "configuration",
+    "config",
     "dotenv",
-    "http"
+    "http",
+    "ci-cd",
+    "bootstrap",
+    "nodejs",
+    "typescript"
   ]
 }

@@ -2,7 +2,12 @@ import { DotenvConfigOptions } from 'dotenv';
 
 export interface InfisicalOptions {
   baseUrl?: string;
-  token?: string;
+
+  // Auth (ONE of the following)
+  token?: string; // service / personal token
+  clientId?: string; // universal auth
+  clientSecret?: string; // universal auth
+
   projectId?: string;
   environment?: string;
 
